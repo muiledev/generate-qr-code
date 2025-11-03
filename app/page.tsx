@@ -1,121 +1,367 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import QRCode from "react-qr-code";
 
+interface BuildVCardArgs {
+  fullName: string;
+  email: string;
+  phone: string;
+  address: string;
+  company: string;
+  jobTitle: string;
+  birthday: string;
+  website: string;
+  notes: string;
+}
+
+const escapeValue = (value: string) =>
+  value
+    .replace(/\\/g, "\\\\")
+    .replace(/\n/g, "\\n")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,");
+
+const buildVCard = ({
+  fullName,
+  email,
+  phone,
+  address,
+  company,
+  jobTitle,
+  birthday,
+  website,
+  notes,
+}: BuildVCardArgs) => {
+  const lines = ["BEGIN:VCARD", "VERSION:3.0"];
+
+  if (fullName) {
+    lines.push(`FN:${escapeValue(fullName)}`);
+  }
+  if (company) {
+    lines.push(`ORG:${escapeValue(company)}`);
+  }
+  if (jobTitle) {
+    lines.push(`TITLE:${escapeValue(jobTitle)}`);
+  }
+  if (phone) {
+    lines.push(`TEL;TYPE=CELL:${escapeValue(phone)}`);
+  }
+  if (email) {
+    lines.push(`EMAIL;TYPE=INTERNET:${escapeValue(email)}`);
+  }
+  if (address) {
+    lines.push(`ADR;TYPE=HOME:;;${escapeValue(address)};;;;`);
+  }
+  if (birthday) {
+    lines.push(`BDAY:${birthday}`);
+  }
+  if (website) {
+    lines.push(`URL:${escapeValue(website)}`);
+  }
+  if (notes) {
+    lines.push(`NOTE:${escapeValue(notes)}`);
+  }
+
+  if (lines.length === 2) {
+    return "";
+  }
+
+  lines.push("END:VCARD");
+  return lines.join("\n");
+};
+
+const inputClasses =
+  "w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition focus:border-sky-500 focus:outline-none focus:ring-4 focus:ring-sky-100";
+
+const mutedHelperClasses = "text-xs text-slate-500";
+
+const toggleButtonClasses =
+  "inline-flex items-center justify-center gap-2 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm font-medium text-sky-700 transition hover:border-sky-300 hover:bg-sky-100";
+
+const actionButtonClasses =
+  "inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition focus:outline-none focus:ring-4";
+
 export default function Home() {
-  const [name, setName] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
+  const [company, setCompany] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
   const [birthday, setBirthday] = useState("");
-  const [qrValue, setQrValue] = useState("");
+  const [website, setWebsite] = useState("");
+  const [notes, setNotes] = useState("");
+  const [showMore, setShowMore] = useState(false);
+  const [lastCopiedValue, setLastCopiedValue] = useState<string | null>(null);
 
-  const generateQR = () => {
-    if (!name && !phone && !address && !birthday) {
-      alert("Please fill in at least one field.");
+  const vCard = useMemo(
+    () =>
+      buildVCard({
+        fullName,
+        email,
+        phone,
+        address,
+        company,
+        jobTitle,
+        birthday,
+        website,
+        notes,
+      }),
+    [
+      fullName,
+      email,
+      phone,
+      address,
+      company,
+      jobTitle,
+      birthday,
+      website,
+      notes,
+    ],
+  );
+
+  const hasContactInfo = Boolean(vCard);
+  const hasCopiedCurrent = hasContactInfo && lastCopiedValue === vCard;
+
+  const handleCopy = async () => {
+    if (!hasContactInfo || typeof navigator === "undefined") {
       return;
     }
 
-    const vCard = `BEGIN:VCARD
-VERSION:3.0
-FN:${name || ""}
-TEL:${phone || ""}
-ADR:;;${address || ""};;;;
-BDAY:${birthday || ""}
-END:VCARD`.replace(/\n/g, "\n"); // Keep line breaks
+    try {
+      await navigator.clipboard?.writeText(vCard);
+      setLastCopiedValue(vCard);
+    } catch (error) {
+      console.error("Failed to copy vCard", error);
+    }
+  };
 
-    setQrValue(vCard.trim());
+  const resetForm = () => {
+    setFullName("");
+    setEmail("");
+    setPhone("");
+    setAddress("");
+    setCompany("");
+    setJobTitle("");
+    setBirthday("");
+    setWebsite("");
+    setNotes("");
+    setShowMore(false);
+    setLastCopiedValue(null);
   };
 
   return (
-    <div
-      style={{
-        padding: "2rem",
-        maxWidth: "600px",
-        margin: "0 auto",
-        fontFamily: "system-ui, sans-serif",
-      }}
-    >
-      <h1 style={{ textAlign: "center", marginBottom: "1rem" }}>
-        QR Code Contact Generator
-      </h1>
-      <p style={{ textAlign: "center", color: "#555", marginBottom: "2rem" }}>
-        Enter your details and generate a scannable vCard QR code.
-      </p>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-        <input
-          type="text"
-          placeholder="Full Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          style={inputStyle}
-        />
-        <input
-          type="tel"
-          placeholder="Phone Number"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          style={inputStyle}
-        />
-        <input
-          type="text"
-          placeholder="Address (e.g., 123 Main St, City, Country)"
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          style={inputStyle}
-        />
-        <input
-          type="date"
-          value={birthday}
-          onChange={(e) => setBirthday(e.target.value)}
-          style={inputStyle}
-        />
-      </div>
-
-      <button onClick={generateQR} style={buttonStyle}>
-        Generate QR Code
-      </button>
-
-      {qrValue && (
-        <div style={{ marginTop: "2rem", textAlign: "center" }}>
-          <h3>Your QR Code:</h3>
-          <div
-            style={{
-              background: "white",
-              padding: "16px",
-              display: "inline-block",
-              borderRadius: "8px",
-            }}
-          >
-            <QRCode value={qrValue} size={256} />
-          </div>
-          <p style={{ marginTop: "1rem", color: "#333", fontSize: "0.9rem" }}>
-            Scan with your phone to save as a contact.
+    <main className="min-h-screen bg-slate-100 py-12">
+      <div className="mx-auto max-w-4xl px-4">
+        <header className="mb-10 text-center">
+          <h1 className="text-3xl font-semibold text-slate-900">
+            QR Contact Generator
+          </h1>
+          <p className="mt-3 text-base text-slate-600">
+            Fill in the basics, generate your QR code instantly, and add extra
+            details only when you need them.
           </p>
+        </header>
+
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr),minmax(260px,1fr)]">
+          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="space-y-8">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">
+                  Contact basics
+                </h2>
+                <p className={mutedHelperClasses}>
+                  These four fields are all you need for a solid contact card.
+                </p>
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <label className="flex flex-col gap-1 md:col-span-2">
+                    <span className="text-sm font-medium text-slate-700">
+                      Full name
+                    </span>
+                    <input
+                      className={inputClasses}
+                      placeholder="Ada Lovelace"
+                      value={fullName}
+                      onChange={(event) => setFullName(event.target.value)}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-sm font-medium text-slate-700">
+                      Email
+                    </span>
+                    <input
+                      className={inputClasses}
+                      placeholder="you@example.com"
+                      type="email"
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-sm font-medium text-slate-700">
+                      Phone number
+                    </span>
+                    <input
+                      className={inputClasses}
+                      placeholder="+1 555 0100"
+                      type="tel"
+                      value={phone}
+                      onChange={(event) => setPhone(event.target.value)}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 md:col-span-2">
+                    <span className="text-sm font-medium text-slate-700">
+                      Address
+                    </span>
+                    <input
+                      className={inputClasses}
+                      placeholder="123 Main St, City, Country"
+                      value={address}
+                      onChange={(event) => setAddress(event.target.value)}
+                    />
+                    <span className={mutedHelperClasses}>
+                      A single line is perfect—devices will split it up on save.
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="border-t border-slate-200 pt-6">
+                <button
+                  type="button"
+                  className={toggleButtonClasses}
+                  onClick={() => setShowMore((previous) => !previous)}
+                >
+                  {showMore ? "Hide extra details" : "Add more details"}
+                </button>
+
+                {showMore && (
+                  <div className="mt-6 space-y-5">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <label className="flex flex-col gap-1">
+                        <span className="text-sm font-medium text-slate-700">
+                          Company
+                        </span>
+                        <input
+                          className={inputClasses}
+                          placeholder="Analytical Engines Co."
+                          value={company}
+                          onChange={(event) => setCompany(event.target.value)}
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1">
+                        <span className="text-sm font-medium text-slate-700">
+                          Job title
+                        </span>
+                        <input
+                          className={inputClasses}
+                          placeholder="Chief Mathematician"
+                          value={jobTitle}
+                          onChange={(event) => setJobTitle(event.target.value)}
+                        />
+                      </label>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <label className="flex flex-col gap-1">
+                        <span className="text-sm font-medium text-slate-700">
+                          Website
+                        </span>
+                        <input
+                          className={inputClasses}
+                          placeholder="https://example.com"
+                          value={website}
+                          onChange={(event) => setWebsite(event.target.value)}
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1">
+                        <span className="text-sm font-medium text-slate-700">
+                          Birthday
+                        </span>
+                        <input
+                          className={inputClasses}
+                          type="date"
+                          value={birthday}
+                          onChange={(event) => setBirthday(event.target.value)}
+                        />
+                      </label>
+                    </div>
+
+                    <label className="flex flex-col gap-1">
+                      <span className="text-sm font-medium text-slate-700">
+                        Notes
+                      </span>
+                      <textarea
+                        className={`${inputClasses} min-h-[96px] resize-y leading-relaxed`}
+                        placeholder="Personal details, how you met, or anything helpful"
+                        value={notes}
+                        onChange={(event) => setNotes(event.target.value)}
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+
+          <aside className="flex flex-col gap-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">
+                Preview &amp; QR
+              </h2>
+              <p className={mutedHelperClasses}>
+                Your QR code updates automatically as you edit the details.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center">
+              {hasContactInfo ? (
+                <div className="flex flex-col items-center gap-4">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <QRCode value={vCard} size={220} />
+                  </div>
+                  <p className="text-sm text-slate-600">
+                    Scan to save this contact instantly.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm text-slate-600">
+                  Add at least one detail to generate your QR code.
+                </p>
+              )}
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                vCard preview
+              </h3>
+              <textarea
+                className={`${inputClasses} mt-2 min-h-[180px] resize-y font-mono text-xs`}
+                value={vCard}
+                readOnly
+                placeholder="The vCard content will appear here once you add details."
+              />
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                className={`${actionButtonClasses} border border-sky-500 bg-sky-500 text-white hover:bg-sky-600 focus:ring-sky-200`}
+                onClick={handleCopy}
+                disabled={!hasContactInfo}
+              >
+                {hasCopiedCurrent ? "Copied!" : "Copy vCard"}
+              </button>
+              <button
+                type="button"
+                className={`${actionButtonClasses} border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900 focus:ring-slate-100`}
+                onClick={resetForm}
+              >
+                Reset form
+              </button>
+            </div>
+          </aside>
         </div>
-      )}
-    </div>
+      </div>
+    </main>
   );
 }
 
-// Simple inline styles
-const inputStyle = {
-  padding: "12px",
-  fontSize: "1rem",
-  border: "1px solid #ccc",
-  borderRadius: "6px",
-  outline: "none",
-};
-
-const buttonStyle = {
-  marginTop: "1rem",
-  padding: "12px 24px",
-  fontSize: "1rem",
-  backgroundColor: "#0070f3",
-  color: "white",
-  border: "none",
-  borderRadius: "6px",
-  cursor: "pointer",
-  fontWeight: "bold",
-};
