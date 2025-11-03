@@ -151,6 +151,25 @@ export default function Home() {
     setLastCopiedValue(null);
   };
 
+  const handleDownload = () => {
+    if (!hasContactInfo || typeof window === "undefined") {
+      return;
+    }
+
+    const blob = new Blob([vCard], { type: "text/vcard" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `${fullName || "contact"}.vcf`;
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <main className="min-h-screen bg-slate-100 py-12">
       <div className="mx-auto max-w-4xl px-4">
@@ -353,6 +372,14 @@ export default function Home() {
               <button
                 type="button"
                 className={`${actionButtonClasses} border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900 focus:ring-slate-100`}
+                onClick={handleDownload}
+                disabled={!hasContactInfo}
+              >
+                Download vCard
+              </button>
+              <button
+                type="button"
+                className={`${actionButtonClasses} border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900 focus:ring-slate-100`}
                 onClick={resetForm}
               >
                 Reset form
@@ -364,4 +391,3 @@ export default function Home() {
     </main>
   );
 }
-
