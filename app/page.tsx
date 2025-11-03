@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import QRCode from "react-qr-code";
 
 interface BuildVCardArgs {
@@ -94,6 +94,7 @@ export default function Home() {
   const [notes, setNotes] = useState("");
   const [showMore, setShowMore] = useState(false);
   const [lastCopiedValue, setLastCopiedValue] = useState<string | null>(null);
+  const qrContainerRef = useRef<HTMLDivElement>(null);
 
   const vCard = useMemo(
     () =>
@@ -151,7 +152,7 @@ export default function Home() {
     setLastCopiedValue(null);
   };
 
-  const handleDownload = () => {
+  const handleDownloadVCard = () => {
     if (!hasContactInfo || typeof window === "undefined") {
       return;
     }
@@ -168,6 +169,55 @@ export default function Home() {
     document.body.removeChild(link);
 
     URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadQr = () => {
+    if (!hasContactInfo || typeof window === "undefined") {
+      return;
+    }
+
+    const svgElement = qrContainerRef.current?.querySelector("svg");
+    if (!svgElement) {
+      return;
+    }
+
+    const clonedSvg = svgElement.cloneNode(true) as SVGSVGElement;
+    clonedSvg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+
+    const serializer = new XMLSerializer();
+    const svgString = serializer.serializeToString(clonedSvg);
+    const svgBlob = new Blob([svgString], {
+      type: "image/svg+xml;charset=utf-8",
+    });
+    const url = URL.createObjectURL(svgBlob);
+    const image = new Image();
+
+    image.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = image.width;
+      canvas.height = image.height;
+
+      const context = canvas.getContext("2d");
+      context?.drawImage(image, 0, 0);
+
+      const pngDataUrl = canvas.toDataURL("image/png");
+      const downloadLink = document.createElement("a");
+
+      downloadLink.href = pngDataUrl;
+      downloadLink.download = `${fullName || "contact"}-qr.png`;
+
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+
+      URL.revokeObjectURL(url);
+    };
+
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+    };
+
+    image.src = url;
   };
 
   return (
@@ -336,7 +386,10 @@ export default function Home() {
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center">
               {hasContactInfo ? (
                 <div className="flex flex-col items-center gap-4">
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div
+                    ref={qrContainerRef}
+                    className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                  >
                     <QRCode value={vCard} size={220} />
                   </div>
                   <p className="text-sm text-slate-600">
@@ -372,7 +425,15 @@ export default function Home() {
               <button
                 type="button"
                 className={`${actionButtonClasses} border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900 focus:ring-slate-100`}
-                onClick={handleDownload}
+                onClick={handleDownloadQr}
+                disabled={!hasContactInfo}
+              >
+                Download QR
+              </button>
+              <button
+                type="button"
+                className={`${actionButtonClasses} border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900 focus:ring-slate-100`}
+                onClick={handleDownloadVCard}
                 disabled={!hasContactInfo}
               >
                 Download vCard
