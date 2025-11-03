@@ -6,7 +6,7 @@ import QRCode from "react-qr-code";
 interface BuildVCardArgs {
   fullName: string;
   email: string;
-  phone: string;
+  phones: string[];
   address: string;
   company: string;
   jobTitle: string;
@@ -22,10 +22,16 @@ const escapeValue = (value: string) =>
     .replace(/;/g, "\\;")
     .replace(/,/g, "\\,");
 
+const parsePhoneNumbers = (value: string) =>
+  value
+    .split(/[\n,;]+/)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
 const buildVCard = ({
   fullName,
   email,
-  phone,
+  phones,
   address,
   company,
   jobTitle,
@@ -44,9 +50,12 @@ const buildVCard = ({
   if (jobTitle) {
     lines.push(`TITLE:${escapeValue(jobTitle)}`);
   }
-  if (phone) {
-    lines.push(`TEL;TYPE=CELL:${escapeValue(phone)}`);
-  }
+
+  phones.forEach((number, index) => {
+    const type = index === 0 ? "CELL" : "VOICE";
+    lines.push(`TEL;TYPE=${type}:${escapeValue(number)}`);
+  });
+
   if (email) {
     lines.push(`EMAIL;TYPE=INTERNET:${escapeValue(email)}`);
   }
@@ -85,7 +94,7 @@ const actionButtonClasses =
 export default function Home() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [phoneInput, setPhoneInput] = useState("");
   const [address, setAddress] = useState("");
   const [company, setCompany] = useState("");
   const [jobTitle, setJobTitle] = useState("");
@@ -101,7 +110,7 @@ export default function Home() {
       buildVCard({
         fullName,
         email,
-        phone,
+        phones: parsePhoneNumbers(phoneInput),
         address,
         company,
         jobTitle,
@@ -112,7 +121,7 @@ export default function Home() {
     [
       fullName,
       email,
-      phone,
+      phoneInput,
       address,
       company,
       jobTitle,
@@ -141,7 +150,7 @@ export default function Home() {
   const resetForm = () => {
     setFullName("");
     setEmail("");
-    setPhone("");
+    setPhoneInput("");
     setAddress("");
     setCompany("");
     setJobTitle("");
@@ -275,9 +284,13 @@ export default function Home() {
                       className={inputClasses}
                       placeholder="+1 555 0100"
                       type="tel"
-                      value={phone}
-                      onChange={(event) => setPhone(event.target.value)}
+                      value={phoneInput}
+                      onChange={(event) => setPhoneInput(event.target.value)}
                     />
+                    <span className={mutedHelperClasses}>
+                      Separate multiple numbers with commas, semicolons, or new
+                      lines.
+                    </span>
                   </label>
                   <label className="flex flex-col gap-1 md:col-span-2">
                     <span className="text-sm font-medium text-slate-700">
