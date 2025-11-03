@@ -55,9 +55,8 @@ const buildVCard = ({
     lines.push(`TITLE:${escapeValue(jobTitle)}`);
   }
 
-  phones.forEach((number, index) => {
-    const type = index === 0 ? "CELL" : "VOICE";
-    lines.push(`TEL;TYPE=${type}:${escapeValue(number)}`);
+  phones.forEach((number) => {
+    lines.push(`TEL;TYPE=CELL:${escapeValue(number)}`);
   });
 
   if (email) {
@@ -288,18 +287,17 @@ export default function Home() {
                   </label>
                   <label className="flex flex-col gap-1">
                     <span className="text-sm font-medium text-slate-700">
-                      Phone number
+                      Phone numbers
                     </span>
-                    <input
-                      className={inputClasses}
-                      placeholder="+1 555 0100"
-                      type="tel"
+                    <textarea
+                      className={`${inputClasses} min-h-[88px] resize-y leading-relaxed`}
+                      placeholder={"+84 907 741 147\n+1 408 592 1508"}
                       value={phoneInput}
                       onChange={(event) => setPhoneInput(event.target.value)}
                     />
                     <span className={mutedHelperClasses}>
-                      Separate multiple numbers with commas, semicolons, or new
-                      lines.
+                      One number per line works best. Commas or semicolons are
+                      fine too.
                     </span>
                   </label>
                   <label className="flex flex-col gap-1 md:col-span-2">
