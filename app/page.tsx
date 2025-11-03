@@ -3,11 +3,14 @@
 import { useMemo, useRef, useState } from "react";
 import QRCode from "react-qr-code";
 
+type AddressType = "home" | "work" | "other";
+
 interface BuildVCardArgs {
   fullName: string;
   email: string;
   phones: string[];
   address: string;
+  addressType: AddressType;
   company: string;
   jobTitle: string;
   birthday: string;
@@ -33,6 +36,7 @@ const buildVCard = ({
   email,
   phones,
   address,
+  addressType,
   company,
   jobTitle,
   birthday,
@@ -60,7 +64,9 @@ const buildVCard = ({
     lines.push(`EMAIL;TYPE=INTERNET:${escapeValue(email)}`);
   }
   if (address) {
-    lines.push(`ADR;TYPE=HOME:;;${escapeValue(address)};;;;`);
+    const typePrefix =
+      addressType === "other" ? "" : `;TYPE=${addressType.toUpperCase()}`;
+    lines.push(`ADR${typePrefix}:;;${escapeValue(address)};;;;`);
   }
   if (birthday) {
     lines.push(`BDAY:${birthday}`);
@@ -96,6 +102,7 @@ export default function Home() {
   const [email, setEmail] = useState("");
   const [phoneInput, setPhoneInput] = useState("");
   const [address, setAddress] = useState("");
+  const [addressType, setAddressType] = useState<AddressType>("home");
   const [company, setCompany] = useState("");
   const [jobTitle, setJobTitle] = useState("");
   const [birthday, setBirthday] = useState("");
@@ -112,6 +119,7 @@ export default function Home() {
         email,
         phones: parsePhoneNumbers(phoneInput),
         address,
+        addressType,
         company,
         jobTitle,
         birthday,
@@ -123,6 +131,7 @@ export default function Home() {
       email,
       phoneInput,
       address,
+      addressType,
       company,
       jobTitle,
       birthday,
@@ -152,6 +161,7 @@ export default function Home() {
     setEmail("");
     setPhoneInput("");
     setAddress("");
+    setAddressType("home");
     setCompany("");
     setJobTitle("");
     setBirthday("");
@@ -296,14 +306,28 @@ export default function Home() {
                     <span className="text-sm font-medium text-slate-700">
                       Address
                     </span>
-                    <input
-                      className={inputClasses}
-                      placeholder="123 Main St, City, Country"
-                      value={address}
-                      onChange={(event) => setAddress(event.target.value)}
-                    />
+                    <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr),max-content] sm:items-center">
+                      <input
+                        className={inputClasses}
+                        placeholder="123 Main St, City, Country"
+                        value={address}
+                        onChange={(event) => setAddress(event.target.value)}
+                      />
+                      <select
+                        className={`${inputClasses} sm:h-full sm:min-w-[140px]`}
+                        value={addressType}
+                        onChange={(event) =>
+                          setAddressType(event.target.value as AddressType)
+                        }
+                      >
+                        <option value="home">Home</option>
+                        <option value="work">Work</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
                     <span className={mutedHelperClasses}>
-                      A single line is perfect—devices will split it up on save.
+                      Choose how the address should be labeled in the saved
+                      contact.
                     </span>
                   </label>
                 </div>
